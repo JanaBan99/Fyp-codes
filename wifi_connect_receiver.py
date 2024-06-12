@@ -4,7 +4,7 @@ import network
 
 
 def run_secondary_script():
-    import receiver_final
+    import receiver_final_working
     receiver_final.run()
 
 wifi=network.WLAN(network.STA_IF)
