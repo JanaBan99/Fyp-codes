@@ -1,0 +1,174 @@
+import machine
+import utime
+
+#Define GPIO pins
+led_pin = machine.Pin(16, machine.Pin.OUT)
+
+def sent_to_transmitter(codewords):
+    i=0
+    if i < 1:
+        initial_word = '1111100000'
+        for bit in initial_word:  # Transmit initial 10 bits
+            led_pin.value(int(bit))  # Set the LED state based on the bit
+            print(bit, end='')  # Print the transmitting bit
+            utime.sleep_ms(100)  # Wait for 1000 milliseconds (1 second)
+        print()
+    utime.sleep_ms(25)
+    i +=1
+    print(codewords)
+    for j in range(0, 33):
+        for k in range(0, 18):
+            bit = codewords[j][k]
+            print(bit, end='')
+            led_pin.value(int(bit))  # Set the LED state based on the bit
+            
+            utime.sleep_ms(100)  # Wait for 1000 milliseconds (1 second)
+        print()
+    
+    led_pin.value(0) 
+
+
+
+def process_data(dataword):
+    # Function to process the dataword using the given logic
+
+    # Define the initial states and arrays
+    Current_status = [0, 0, 0]
+    output_status_array = []
+
+
+    separate_arrays = []
+    for i in range(0, len(dataword), 3):
+        separate_arrays.append(dataword[i:i+3])
+        
+    #print("Separate Array:", separate_arrays)
+
+    # Process each separate array
+    for input_codeword in separate_arrays:
+        input_codeword.extend([0, 0, 0]) 
+        #print("Input Codeword:", input_codeword)
+
+        # Process each input codeword
+        for Input in input_codeword:
+            if Current_status == [0, 0, 0] and Input == 0:
+                Output_status = [0, 0, 0]
+                Current_status = [0, 0, 0]
+                output_status_array.extend(Output_status)
+
+            elif Current_status == [0,0,0] and Input == 1:
+                Output_status = [1,1,1]
+                Current_status = [1,0,0]
+                output_status_array.extend(Output_status)
+        
+            ############## 
+        
+            elif Current_status == [0,0,1] and Input == 0:
+                Output_status = [1,0,1]
+                Current_status = [0,0,0]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [0,0,1] and Input == 1:
+                Output_status = [0,1,0]
+                Current_status = [1,0,0]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [0,1,0] and Input == 0:
+                Output_status = [1,1,1]
+                Current_status = [0,0,1]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [0,1,0] and Input == 1:
+                Output_status = [0,0,0]
+                Current_status = [1,0,1]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [0,1,1] and Input == 0:
+                Output_status = [0,1,0]
+                Current_status = [0,0,1]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [0,1,1] and Input == 1:
+                Output_status = [1,0,1]
+                Current_status = [1,0,1]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [1,0,0] and Input == 0:
+                Output_status = [1,1,0]
+                Current_status = [0,1,0]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [1,0,0] and Input == 1:
+                Output_status = [0,0,1]
+                Current_status = [1,1,0]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [1,0,1] and Input == 0:
+                Output_status = [0,1,1]
+                Current_status = [0,1,0]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [1,0,1] and Input == 1:
+                Output_status = [1,0,0]
+                Current_status = [1,1,0]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [1,1,0] and Input == 0:
+                Output_status = [0,0,1]
+                Current_status = [0,1,1]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [1,1,0] and Input == 1:
+                Output_status = [1,1,0]
+                Current_status = [1,1,1]
+                output_status_array.extend(Output_status)
+        
+            ###############
+        
+            elif Current_status == [1,1,1] and Input == 0:
+                Output_status = [1,0,0]
+                Current_status = [0,1,1]
+                output_status_array.extend(Output_status)
+        
+            elif Current_status == [1,1,1] and Input == 1:
+                Output_status = [0,1,1]
+                Current_status = [1,1,1]
+                output_status_array.extend(Output_status)
+
+        #print("Input:", Input)
+        #print("Current Status:", Current_status)
+        #print("------------------------")
+
+    print("------------------------")
+    print("Output Status Array:", output_status_array)
+    print("------------------------")
+
+    separate_encoded_arrays = []
+    for i in range(0, len(output_status_array), 18):
+        separate_encoded_arrays.append(output_status_array[i:i+18])
+        
+    print("Separate encoded Array:", separate_encoded_arrays)
+
+    #for input_encoded_codeword in separate_encoded_arrays:
+    #    print("Input Codeword:", input_encoded_codeword)
+    #for index, input_encoded_codeword in enumerate(separate_encoded_arrays, start=1):
+        #print(f"Input Codeword{index}: {input_encoded_codeword}")
+    
+    sent_to_transmitter(separate_encoded_arrays)
+
+# Test the function with a sample dataword
+dataword = [1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1]
+#dataword = [1, 0, 1, 1, 0, 1]
+process_data(dataword)
+print("Bit transmission finished")
+
+
