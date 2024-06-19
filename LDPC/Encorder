@@ -1,0 +1,106 @@
+import machine
+import utime
+
+# Define GPIO pins
+led_pin = machine.Pin(16, machine.Pin.OUT)
+
+def Convolutional_encoding():
+    codeword = '1010110010101100110101001100101011010011010110010101001101010100110101100101101001101010010110100110'
+
+    chunks = [codeword[i:i+4] for i in range(0, 100, 4)]
+
+    two_d_array = []
+    for i in range(0, len(chunks), 5):
+        row = chunks[i:i+5]
+        two_d_array.append(row)
+
+    u = []
+    Codeword_2d_array= []
+    for i in range(0,5):
+        for j in range(0,5):
+            Codeword_2d_array.append(two_d_array[i][j])
+    #print("Codeword: ", U)
+
+
+    U = [[int(bit) for bit in word] for word in Codeword_2d_array]
+
+    # Print the resulting 2D array
+    print("Codeword: ", U)
+    
+        
+
+
+
+    #Initialize 
+    P = [[1, 0, 0, 1],
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 1]]
+
+    #Identity matrix generation
+    identity_matrix = []
+    for i in range(len(P[1])):
+            # Initialize an empty row
+            row = []
+            # Loop over each column in the current row
+            for j in range(len(P[1])):
+                # If row index is equal to column index, set element to 1
+                if i == j:
+                    row.append(1)
+                # Otherwise, set element to 0
+                else:
+                    row.append(0)
+            # Append the row to the matrix
+            identity_matrix.append(row)
+    print("Identity Matrix: ", identity_matrix)
+
+    #Generator Matrix
+    Generator_matrix = []
+    for k in range(len(P[1])):
+        P[k].extend(identity_matrix[k])
+        Generator_matrix.append(P[k])
+
+    #U = [1, 0, 1, 1]
+
+    print("Generator Matrix: ", Generator_matrix)   
+
+    CodeWord_matrix = []
+    #len(CodeWord_matrix) == 8
+
+    for i in range(0, len(U)):
+        b = []
+        b.append(U[i][0] ^ U[i][1])
+        b.append(U[i][1] ^ U[i][2])
+        b.append(U[i][2] ^ U[i][3])
+        b.append(U[i][3] ^ U[i][0])
+        b.extend(U[i])
+        
+        CodeWord_matrix.append(b)
+
+    print("CodeWord_matrix: ", CodeWord_matrix)
+    flat_list = [str(item) for sublist in CodeWord_matrix for item in sublist]
+
+    # Convert the flat list to a single string
+    binary_string = ''.join(flat_list)
+
+    print("Binary string:", binary_string)
+
+    #print(len(binary_string))
+    return binary_string
+
+dataword = Convolutional_encoding()
+initial_word = '1111100000'
+
+for bit in initial_word:  # Transmit initial 10 bits
+    led_pin.value(int(bit))  # Set the LED state based on the bit
+    print(bit, end='')  # Print the transmitting bit
+    utime.sleep_ms(1000)  # Wait for 1000 milliseconds (1 second)
+print()
+utime.sleep_ms(25)
+    
+for bit in dataword:  # Transmit the 99-bit data word
+    led_pin.value(int(bit))  # Set the LED state based on the bit
+    print(bit, end='')  # Print the transmitting bit
+    utime.sleep_ms(1000)  # Wait for 1000 milliseconds (1 second)
+
+led_pin.value(0)  # Turn off the LED
