@@ -55,29 +55,37 @@ def Convolutional_encoding():
     print("Identity Matrix: ", identity_matrix)
 
     #Generator Matrix
-    Generator_matrix = []
+    Generator_Matrix = []
     for k in range(len(P[1])):
         P[k].extend(identity_matrix[k])
-        Generator_matrix.append(P[k])
+        Generator_Matrix.append(P[k])
 
     #U = [1, 0, 1, 1]
 
-    print("Generator Matrix: ", Generator_matrix)   
+    print("Generator Matrix: ", Generator_Matrix)   
 
     CodeWord_matrix = []
     #len(CodeWord_matrix) == 8
 
-    for i in range(0, len(U)):
-        b = []
-        b.append(U[i][0] ^ U[i][1])
-        b.append(U[i][1] ^ U[i][2])
-        b.append(U[i][2] ^ U[i][3])
-        b.append(U[i][3] ^ U[i][0])
-        b.extend(U[i])
+    for codeword in U:
+        # Initialize a list to store the resulting encoded word
+        encoded_word = []
         
-        CodeWord_matrix.append(b)
-
-    print("CodeWord_matrix: ", CodeWord_matrix)
+        # Multiply codeword with Generator_Matrix
+        for j in range(len(Generator_Matrix[0])):
+            # Perform the XOR operation for each element in the resulting word
+            result = (
+                codeword[0] * Generator_Matrix[0][j] ^
+                codeword[1] * Generator_Matrix[1][j] ^
+                codeword[2] * Generator_Matrix[2][j] ^
+                codeword[3] * Generator_Matrix[3][j]
+            )
+            # Append the result to the encoded_word list
+            encoded_word.append(result)
+        
+        # Append the encoded_word to the main list a
+        CodeWord_matrix.append(encoded_word)
+        print("CodeWord_matrix: ", CodeWord_matrix)
     flat_list = [str(item) for sublist in CodeWord_matrix for item in sublist]
 
     # Convert the flat list to a single string
