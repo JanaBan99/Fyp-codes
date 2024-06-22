@@ -16,6 +16,8 @@ ref_voltage = 3.3
 # Setup ADC
 adc = ADC(Pin(ANALOG_IN_PIN))
 
+final_decoded_bits = []
+
 def Convolution_decording(Decording_bits):
     decoded_bits = []
     array1=[]
@@ -382,9 +384,9 @@ def Convolution_decording(Decording_bits):
             print("Input6:", input_value)
     print("Convolutional Decoded Bits: ", decoded_bits)
     
-    final_decoded_bits = []
+    
     final_decoded_bits.append(decoded_bits)
-    return final_decoded_bits
+    #return final_decoded_bits
  
 
 def read_voltage():
@@ -481,7 +483,7 @@ def main():
         for row in Binary_values:
             print(row)
             Convolution_decording(row)
-    #print("Final Decoded Bits:", Convolution_decording.final_decoded_bits)
+    	print("Final Decoded Bits:", final_decoded_bits)
 
 if __name__ == "__main__":
     print("Starting edge detection...")
