@@ -1,0 +1,540 @@
+# code is errorless when two lights are on
+
+from machine import ADC, Pin
+import time
+
+# Define analog input
+ANALOG_IN_PIN = 28
+
+# Floats for resistor values in divider (in ohms)
+R1 = 30000.0
+R2 = 7500.0
+
+# Float for Reference Voltage
+ref_voltage = 3.3
+
+# Setup ADC
+adc = ADC(Pin(ANALOG_IN_PIN))
+final_decoded_bits = []
+encoded_bits = []
+
+def Convolution_decording(Decording_bits):
+    decoded_bits = []
+    
+    array1=[]
+    array2=[]
+    array3=[]
+    array4=[]
+    array5=[]
+    array6=[]
+             
+    #Decording_bits = [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1]#[0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1] #[1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1]
+    
+    array1 = Decording_bits[0:3]
+    array2 = Decording_bits[3:6]
+    array3 = Decording_bits[6:9]
+    array4 = Decording_bits[9:12]
+    array5 = Decording_bits[12:15]
+    array6 = Decording_bits[15:18]
+    
+    ############## decode the bits in the first stage ################
+    if array1 == [0, 0, 0]:
+        input_value = 0
+        print("Input1:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array1 == [1, 1, 1]:
+        input_value = 1
+        print("Input1:", input_value)
+        decoded_bits.append(input_value)
+    else:
+        a = [1, 1, 1]
+        b = [0, 0, 0]
+        hamming_dist_111 = sum(1 for x, y in zip(array1, a) if x != y)
+        hamming_dist_000 = sum(1 for x, y in zip(array1, b) if x != y)
+        
+        values = [x for x in (hamming_dist_111, hamming_dist_000) if x != 0]
+        min_hamming_dist = min(values)
+        #print("hamming_dist_000:", hamming_dist_000)
+        #print("hamming_dist_111:", hamming_dist_111)
+        if hamming_dist_111 > hamming_dist_000:
+            input_value = 0
+            print("Input1:", input_value)
+            decoded_bits.append(input_value)
+        else:
+            input_value = 1
+            print("Input1:", input_value)
+            decoded_bits.append(input_value)
+    
+    ############### Decord the bits in the second stage ##############
+    
+    if array2 == [0, 0, 0]:
+        input_value = 0
+        next_shift_reg = [0, 0, 0]
+        print("Input2:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array2 == [1, 1, 1]:
+        input_value = 1
+        next_shift_reg = [1, 0, 0]
+        print("Input2:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array2 == [1, 1, 0]:
+        input_value = 0
+        next_shift_reg = [0, 1, 0]
+        #print("next_shift_reg:", next_shift_reg)
+        print("Input2:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array2 == [0, 0, 1]:
+        input_value = 1
+        next_shift_reg = [1, 1, 0]
+        print("Input2:", input_value)
+        decoded_bits.append(input_value)
+        
+    
+    else:
+        a = [1, 1, 1]
+        b = [0, 0, 0]
+        c = [1, 1, 0]
+        d = [0, 0, 1]
+        hamming_dist_111 = sum(1 for x, y in zip(array2, a) if x != y)
+        hamming_dist_000 = sum(1 for x, y in zip(array2, b) if x != y)
+        hamming_dist_110 = sum(1 for x, y in zip(array2, c) if x != y)
+        hamming_dist_001 = sum(1 for x, y in zip(array2, d) if x != y)
+    
+        values = [x for x in (hamming_dist_111, hamming_dist_000, hamming_dist_110, hamming_dist_001) if x != 0]
+        min_hamming_dist = min(values)
+        
+        if min_hamming_dist == hamming_dist_111:
+            input_value = 1
+            next_shift_reg = [1, 0, 0]
+            print("Input2:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_000:
+            input_value = 0
+            next_shift_reg = [0, 0, 0]
+            print("Input2:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_110:
+            input_value = 0
+            next_shift_reg = [0, 1, 0]
+            print("Input2:", input_value)
+            decoded_bits.append(input_value)
+            #result_array = c
+        elif min_hamming_dist == hamming_dist_001:
+            input_value = 1
+            next_shift_reg = [1, 1, 0]
+            print("Input2:", input_value)
+            decoded_bits.append(input_value)
+    
+    
+    
+    ############### Decord the bits in the third stage ##############
+    # decorde the bits in the third stage
+    #print("next_shift_reg:", next_shift_reg)
+    if array3 == [0, 0, 0] and next_shift_reg == [0, 0, 0]: ############
+        input_value = 0
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [1, 1, 1] and next_shift_reg == [0, 0, 0]:
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [1, 1, 0] and next_shift_reg == [1, 0, 0]:
+        input_value = 0
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [0, 0, 1] and next_shift_reg == [1, 0, 0]:
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [1, 1, 1] and next_shift_reg == [0, 1, 0]:
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [0, 0, 0] and next_shift_reg == [0, 1, 0]: #############
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [0, 0, 1] and next_shift_reg == [1, 1, 0]:
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+        
+    elif array3 == [1, 1, 0] and next_shift_reg == [1, 1, 0]:
+        input_value = 1
+        print("Input3:", input_value)
+        decoded_bits.append(input_value)
+    
+    else:
+        a = [1, 1, 1]
+        b = [0, 0, 0]
+        c = [1, 1, 0]
+        d = [0, 0, 1]
+        hamming_dist_111 = sum(1 for x, y in zip(array3, a) if x != y)
+        hamming_dist_000 = sum(1 for x, y in zip(array3, b) if x != y)
+        hamming_dist_110 = sum(1 for x, y in zip(array3, c) if x != y)
+        hamming_dist_001 = sum(1 for x, y in zip(array3, d) if x != y)
+    
+        values = [x for x in (hamming_dist_111, hamming_dist_000, hamming_dist_110, hamming_dist_001) if x != 0]
+        min_hamming_dist = min(values)
+        
+        
+        if min_hamming_dist == hamming_dist_111 and next_shift_reg == [0, 0, 0]: #check input bits in these 
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_111 and next_shift_reg == [0, 1, 0]:
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_000 and next_shift_reg == [0, 0, 0]:
+            input_value = 0
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_000 and next_shift_reg == [0, 1, 0]:
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_110 and next_shift_reg == [1, 0, 0]:
+            input_value = 0
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_110 and next_shift_reg == [1, 1, 0]:
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_001 and next_shift_reg == [1, 0, 0]:
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+        elif min_hamming_dist == hamming_dist_001 and next_shift_reg == [1, 1, 0]:
+            input_value = 1
+            print("Input3:", input_value)
+            decoded_bits.append(input_value)
+    
+    ############### decorde the bits in the fourth stage ###############
+    if array4 == [0, 0, 0]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [1, 0, 1]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [1, 1, 0]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [1, 1, 1]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [0, 1, 1]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [0, 0, 1]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [0, 1, 0]:
+        input_value = 0
+        print("Input4:", input_value)
+        
+    elif array4 == [1, 0, 0]:
+        input_value = 0
+        print("Input4:", input_value)
+    
+    else:
+        a = [0, 0, 0] 
+        b = [1, 0, 1] 
+        c = [1, 1, 0] 
+        d = [1, 1, 1] 
+        e = [0, 1, 1] 
+        f = [0, 0, 1] 
+        g = [0, 1, 0]
+        h = [1, 0, 0]
+        hamming_dist_000 = sum(1 for x, y in zip(array4, a) if x != y)
+        hamming_dist_101 = sum(1 for x, y in zip(array4, b) if x != y)
+        hamming_dist_110 = sum(1 for x, y in zip(array4, c) if x != y)
+        hamming_dist_111 = sum(1 for x, y in zip(array4, d) if x != y)
+        hamming_dist_011 = sum(1 for x, y in zip(array4, e) if x != y)
+        hamming_dist_001 = sum(1 for x, y in zip(array4, f) if x != y)
+        hamming_dist_010 = sum(1 for x, y in zip(array4, g) if x != y)
+        hamming_dist_100 = sum(1 for x, y in zip(array4, h) if x != y)
+        
+        values = [x for x in (hamming_dist_111, hamming_dist_000, hamming_dist_110, hamming_dist_001, hamming_dist_101, hamming_dist_011, hamming_dist_010, hamming_dist_100) if x != 0]
+        min_hamming_dist = min(values)
+        
+        if min_hamming_dist == hamming_dist_000:## last ek gtte ne ss ekt ekth blnn
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_101:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_110:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_111:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_011:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_001:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_101:
+            input_value = 0
+            print("Input4:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_100:
+            input_value = 0
+            print("Input4:", input_value)
+            
+    ############### decorde the bits in the fifth stage ###############
+    if array5 == [0, 0, 0]:
+        input_value = 0
+        print("Input5:", input_value)
+        
+    elif array5 == [1, 0, 1]:
+        input_value = 0
+        print("Input5:", input_value)
+        
+    elif array5 == [1, 1, 0]:
+        input_value = 0
+        print("Input5:", input_value)
+        
+    elif array5 == [1, 1, 1]:
+        input_value = 0
+        print("Input5:", input_value)
+        
+    
+    else:
+        a = [1, 1, 1]
+        b = [0, 0, 0]
+        c = [1, 1, 0]
+        d = [1, 0, 1]
+        
+        hamming_dist_000 = sum(1 for x, y in zip(array5, b) if x != y)
+        hamming_dist_111 = sum(1 for x, y in zip(array5, a) if x != y)
+        hamming_dist_110 = sum(1 for x, y in zip(array5, c) if x != y)
+        hamming_dist_101 = sum(1 for x, y in zip(array5, d) if x != y)
+        
+    
+        values = [x for x in (hamming_dist_111, hamming_dist_000, hamming_dist_110, hamming_dist_101) if x != 0]
+        min_hamming_dist = min(values)
+        #min_hamming_dist = min(hamming_dist_000, hamming_dist_101, hamming_dist_110, hamming_dist_111)
+        
+        if min_hamming_dist == hamming_dist_000:
+            input_value = 0
+            print("Input5:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_101:
+            input_value = 0
+            print("Input5:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_110:
+            input_value = 0
+            print("Input5:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_111:
+            input_value = 0
+            print("Input5:", input_value)
+    
+    
+    ############### decorde the bits in the sixth stage ###############
+    
+    if array6 == [0, 0, 0]:
+        input_value = 0
+        print("Input6:", input_value)
+        
+    elif array6 == [1, 0, 1]:
+        input_value = 0
+        print("Input6:", input_value)
+        
+    else:
+        a = [1, 0, 1]
+        b = [0, 0, 0]
+        hamming_dist_000 = sum(1 for x, y in zip(array6, b) if x != y)
+        hamming_dist_101 = sum(1 for x, y in zip(array6, a) if x != y)
+        
+        values = [x for x in (hamming_dist_000, hamming_dist_101) if x != 0]
+        min_hamming_dist = min(values)
+        
+        if min_hamming_dist == hamming_dist_000:
+            input_value = 0
+            print("Input6:", input_value)
+            
+        elif min_hamming_dist == hamming_dist_101:
+            input_value = 0
+            print("Input6:", input_value)
+    print("Convolutional Decoded Bits: ", decoded_bits)
+    
+    
+
+    final_decoded_bits.append(decoded_bits)
+    #return final_decoded_bits
+ 
+
+def read_voltage():
+    # Read the analog input
+    adc_value = adc.read_u16()
+    
+    # Determine voltage at ADC input
+    adc_voltage = (adc_value / 65535) * ref_voltage
+    
+    # Calculate voltage at divider input
+    in_voltage = adc_voltage * (R1 + R2) / R2
+    
+    return in_voltage
+
+def edge_detection():
+    previous_voltage = read_voltage()
+    
+    time.sleep(0.01)#0.01
+    
+    while True:
+        current_voltage = read_voltage()
+        #print(current_voltage)
+        if current_voltage > previous_voltage + 5:  # Edge rise threshold
+            print("Rising edge detected")
+            break
+        previous_voltage = current_voltage
+        time.sleep(0.1) #for 10 samples per second
+        #time.sleep(0.01)
+def main():
+ 
+
+    voltages = []  # Array to store voltage values
+    Bits = []
+    #threshold_value=False 
+    while len(voltages) < 10:
+        #start_time = time.time()
+
+        #while len(samples) < 10:
+        input_voltage = read_voltage()
+        #print(" >>>>>>>>>>>>>>>>>>>>Input Voltage = {:.2f}".format(input_voltage))
+        voltages.append(input_voltage)
+        #print("Received voltages :",voltages)
+        time.sleep(0.1) #for 10 samples per second
+        #time.sleep(0.01)
+
+    #print("123")
+    print("Received voltages :",voltages)
+    # Calculate threshold from last 5 values
+    first_five_average = sum(voltages[:5]) / 5
+    threshold = first_five_average - (0.58 * first_five_average)
+    print("Threshold Value = {:.2f}".format(threshold))
+    threshold_value=True
+    
+    # Array to store binary values based on threshold comparison
+    binary_values = []
+
+    # Compare voltage values with threshold
+    for voltage in voltages:
+        if voltage > threshold:
+            binary_values.append(1)
+        else:
+            binary_values.append(0)
+
+    print("Binary values based on threshold comparison:", binary_values)
+
+    # Check if the binary sequence matches the specified pattern
+    if binary_values == [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]:
+        print("Proceeding to the next part...")
+    else:
+        print("Initialization Wrong")
+        #return
+
+    #2d array to store the received voltages
+    if threshold_value==True:
+        x_length = 18
+        y_length = 33
+        array_2d = []
+        Binary_values = []
+        for _ in range(y_length):
+            row = []
+            for _ in range(x_length):
+                input_voltage = read_voltage()
+                row.append(input_voltage)
+                time.sleep(0.1)  # Simulate a delay for reading the voltage
+                #time.sleep(0.01)
+            array_2d.append(row)
+
+        print("Original Array:")
+        for row in array_2d:
+            print(row)
+
+        # Compare each element with the threshold and create a new 2D array
+        Binary_values = [[1 if value > threshold else 0 for value in row] for row in array_2d]
+
+        print("Binary values:",Binary_values)
+        print("\nComparison Result (1 if value > threshold, else 0):")
+        for row in Binary_values:
+            print(row)
+            encoded_bits.extend(row)
+            Convolution_decording(row)
+            print()
+        
+        #Decoded bits
+        print("Final Decoded Bits:", final_decoded_bits)
+        bit_stream1= '101011001010110011010100110010101101001101011001010100110101010011010110010110100110101001011010110'
+        
+        
+        binary_string = ''.join(''.join(map(str, bits)) for bits in final_decoded_bits)
+        
+        #print()
+        
+        bit_stream2 = binary_string
+        print("Transmitted bits :",len(bit_stream1))
+        print("Received decoded Bits :",len(binary_string))
+        # Ensure both bit streams are of the same length
+        assert len(bit_stream1) == len(bit_stream2), "Bit streams must have the same length"
+        # Count differences
+        differences = sum(1 for b1, b2 in zip(bit_stream1, bit_stream2) if b1 != b2)
+        print("Number of differences between the two bit streams:", differences)
+        
+        print("Received decoded Bits:",binary_string)
+        print("Transmitted bits :",bit_stream1)
+        
+        #Received bits
+        print("Received Bits:",encoded_bits)
+        bit_stream3 = '111110000011111101000111001001010101000000111110111101000111110111101000111001001010101000000111001001010101000111110111101000111110111101000000111001001010101000000111110111101000111110000011111101111110000011111101000000111110111101111110000011111101000111001001010101000000111110111101000111110111101000111110111101000000111001001010101000111110000011111101000111110111101000000111001001010101000111110111101000111001001010101000000111110111101000111001001010101000111110111101000000111001001010101000111110000011111101000000111110111101000111001001010101000111110111101000111001001010101000'
+        
+        dataword_string = ''.join(map(str, encoded_bits))
+        
+        
+        
+        
+        bit_stream4 = dataword_string
+        print("Convolution encoded bits :",len(bit_stream3))
+        assert len(bit_stream3) == len(bit_stream4), "Bit streams must have the same length"
+        # Count differences
+        differences = sum(1 for b1, b2 in zip(bit_stream3, bit_stream4) if b1 != b2)
+        print("Number of differences between the two bit streams:", differences)
+        
+        print("Transmitted Convolutional encoded bits :",bit_stream3)
+        print("Received Convolutional encoded Bits total:",dataword_string)
+
+
+if __name__ == "__main__":
+    print("Starting edge detection...")
+    edge_detection()
+    print("Starting main function...")
+    main()
