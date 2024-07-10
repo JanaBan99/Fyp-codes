@@ -1,0 +1,85 @@
+import machine
+import utime
+import random
+
+import random
+
+def generate_99_binary_bits():
+    return ''.join(random.choice(['0', '1']) for _ in range(99))
+
+# Define GPIO pins
+led_pin = machine.Pin(16, machine.Pin.OUT)
+
+#data_word = generate_99_binary_bits() # 99-bit data word to send
+# data_word = '101011001010110011010100110010101101001101011001010100110101010011010110010110100110101001011010110'
+data_word = '111110000011111101000111001001010101000000111110111101000111110111101000111001001010101000000111001001010101000111110111101000111110111101000000111001001010101000000111110111101000111110000011111101111110000011111101000000111110111101111110000011111101000111001001010101000000111110111101000111110111101000111110111101000000111001001010101000111110000011111101000111110111101000000111001001010101000111110111101000111001001010101000000111110111101000111001001010101000111110111101000000111001001010101000111110000011111101000000111110111101000111001001010101000111110111101000111001001010101000'
+initial_word = '1111100000'  # Initial 10-bit word to send before data_word
+# Function to send the data word
+
+# Splitting the data_word into sets
+a = data_word[:150]
+b = data_word[150:300]
+c = data_word[300:450]
+d = data_word[450:]
+
+
+
+def send_data_word(initial_word,a,b,c,d):
+    for bit in initial_word:  # Transmit initial 10 bits
+        led_pin.value(int(bit))  # Set the LED state base3d on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)  
+    print()
+    
+    for bit in a:  
+        led_pin.value(int(bit))  # Set the LED state based on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)
+    print()
+    led_pin.value(0)
+    utime.sleep_ms(200)
+    for bit in initial_word:  # Transmit initial 10 bits
+        led_pin.value(int(bit))  # Set the LED state base3d on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)  
+    print()
+    
+    for bit in b:  
+        led_pin.value(int(bit))  # Set the LED state based on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)
+    print()
+    led_pin.value(0)
+    utime.sleep_ms(200)
+    for bit in initial_word:  # Transmit initial 10 bits
+        led_pin.value(int(bit))  # Set the LED state base3d on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)  
+    print()
+    
+    for bit in c:  
+        led_pin.value(int(bit))  # Set the LED state based on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)
+    print()
+    led_pin.value(0)
+    utime.sleep_ms(200)
+    for bit in initial_word:  # Transmit initial 10 bits
+        led_pin.value(int(bit))  # Set the LED state base3d on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)  
+    print()
+    
+    for bit in d:  
+        led_pin.value(int(bit))  # Set the LED state based on the bit
+        print(bit, end='')  # Print the transmitting bit
+        utime.sleep_ms(100)
+    print()
+#Data(data_word)
+send_data_word(initial_word,a,b,c,d)
+led_pin.value(0)  # Turn off the LED
+
+
+
+
+
