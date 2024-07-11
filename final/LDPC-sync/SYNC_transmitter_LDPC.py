@@ -1,218 +1,127 @@
 import machine
 import utime
 
-#Define GPIO pins
+# Define GPIO pins
 led_pin = machine.Pin(16, machine.Pin.OUT)
+def LDPC_encoding(codeword):
+    #Initialize 
+    P = [[1, 0, 0, 1],
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 1]]
 
+    #Identity matrix generation
+    identity_matrix = []
+    for i in range(len(P[1])):
+            # Initialize an empty row
+            row = []
+            # Loop over each column in the current row
+            for j in range(len(P[1])):
+                # If row index is equal to column index, set element to 1
+                if i == j:
+                    row.append(1)
+                # Otherwise, set element to 0
+                else:
+                    row.append(0)
+            # Append the row to the matrix
+            identity_matrix.append(row)
+    #print("Identity Matrix: ", identity_matrix)
+
+    #Generator Matrix
+    Generator_Matrix = []
+    for k in range(len(P[1])):
+        P[k].extend(identity_matrix[k])
+        Generator_Matrix.append(P[k])
+
+    #U = [1, 0, 1, 1]
+
+    #print("Generator Matrix: ", Generator_Matrix)   
+
+    CodeWord_matrix = []
+    #len(CodeWord_matrix) == 8
+
+    encoded_word = []
+    
+    # Multiply codeword with Generator_Matrix
+    for j in range(len(Generator_Matrix[0])):
+        # Perform the XOR operation for each element in the resulting word
+        result = (
+            codeword[0] * Generator_Matrix[0][j] ^
+            codeword[1] * Generator_Matrix[1][j] ^
+            codeword[2] * Generator_Matrix[2][j] ^
+            codeword[3] * Generator_Matrix[3][j]
+        )
+        # Append the result to the encoded_word list
+        encoded_word.append(result)
+    #print("codeword: ", encoded_word)
+
+    binary_str_list = [str(digit) for digit in encoded_word]
+    #print(binary_str_list)
+   
+    # Join the list of strings into a single string
+    binary_string = ''.join(binary_str_list)
+    #print("encoded",binary_string)
+    return binary_string
+
+codeword = '1010110010101100110101001100101011010011010110010101001101010100110101100101101001101010010110100110'
+chunks = [codeword[i:i+4] for i in range(0, 100, 4)]
+
+two_d_array = []
+for i in range(0, len(chunks), 5):
+    row = chunks[i:i+5]
+    two_d_array.append(row)
+
+u = []
+Codeword_2d_array= []
+for i in range(0,5):
+    for j in range(0,5):
+        Codeword_2d_array.append(two_d_array[i][j])
+#print("Codeword: ", U)
+
+
+X = [[int(bit) for bit in word] for word in Codeword_2d_array]
+
+# Print the resulting 2D array
+print("Codeword: ", X)
+
+first_part = X[:12]
+second_part = X[12:]
+
+print("starting initializing bits")
 initial_word = '1111100000'
+for bit in initial_word:  # Transmit initial 10 bits
+    led_pin.value(int(bit))  # Set the LED state based on the bit
+    print(bit, end='')  # Print the transmitting bit
+    utime.sleep_ms(100)  # Wait for 1000 milliseconds (1 second)
+print()
 
-def send_data_word(output_status_array):
-    
-    
-    a = output_status_array[:150]
-    b = output_status_array[150:300]
-    c = output_status_array[300:450]
-    d = output_status_array[450:]
 
-    for bit in initial_word:  # Transmit initial 10 bits
-        led_pin.value(int(bit))  # Set the LED state base3d on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)  
+for row in first_part:
+    dataword = LDPC_encoding(row)
     print()
-    
-    for bit in a:  
-        led_pin.value(int(bit))  # Set the LED state based on the bit
-        print(bit, end='')  # Print the transmitting bit
+    for bit in dataword:
+        led_pin.value(int(bit))
+        print(bit, end='')
         utime.sleep_ms(100)
-    print()
     led_pin.value(0)
-    utime.sleep_ms(200)
-    for bit in initial_word:  # Transmit initial 10 bits
-        led_pin.value(int(bit))  # Set the LED state base3d on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)  
+
+# Sleep period
+utime.sleep_ms(200)
+
+print()
+print("Resending initializing bits")
+for bit in initial_word:
+    led_pin.value(int(bit))
+    print(bit, end='')
+    utime.sleep_ms(100)
+print()
+
+# Send the remaining 13 sets of encoded 8-bit values
+for row in second_part:
+    dataword = LDPC_encoding(row)
     print()
-    
-    for bit in b:  
-        led_pin.value(int(bit))  # Set the LED state based on the bit
-        print(bit, end='')  # Print the transmitting bit
+    for bit in dataword:
+        led_pin.value(int(bit))
+        print(bit, end='')
         utime.sleep_ms(100)
-    print()
     led_pin.value(0)
-    utime.sleep_ms(200)
-    for bit in initial_word:  # Transmit initial 10 bits
-        led_pin.value(int(bit))  # Set the LED state base3d on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)  
-    print()
-    
-    for bit in c:  
-        led_pin.value(int(bit))  # Set the LED state based on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)
-    print()
-    led_pin.value(0)
-    utime.sleep_ms(200)
-    for bit in initial_word:  # Transmit initial 10 bits
-        led_pin.value(int(bit))  # Set the LED state base3d on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)  
-    print()
-    
-    for bit in d:  
-        led_pin.value(int(bit))  # Set the LED state based on the bit
-        print(bit, end='')  # Print the transmitting bit
-        utime.sleep_ms(100)
-    print()
-#Data(data_word)
-led_pin.value(0)  # Turn off the LED
-
-
-
-def process_data(dataword):
-    # Function to process the dataword using the given logic
-
-    # Define the initial states and arrays
-    Current_status = [0, 0, 0]
-    output_status_array = []
-
-
-    separate_arrays = []
-    for i in range(0, len(dataword), 3):
-        separate_arrays.append(dataword[i:i+3])
-        
-    #print("Separate Array:", separate_arrays)
-
-    # Process each separate array
-    for input_codeword in separate_arrays:
-        input_codeword.extend([0, 0, 0]) 
-        #print("Input Codeword:", input_codeword)
-
-        # Process each input codeword
-        for Input in input_codeword:
-            if Current_status == [0, 0, 0] and Input == 0:
-                Output_status = [0, 0, 0]
-                Current_status = [0, 0, 0]
-                output_status_array.extend(Output_status)
-
-            elif Current_status == [0,0,0] and Input == 1:
-                Output_status = [1,1,1]
-                Current_status = [1,0,0]
-                output_status_array.extend(Output_status)
-        
-            ############## 
-        
-            elif Current_status == [0,0,1] and Input == 0:
-                Output_status = [1,0,1]
-                Current_status = [0,0,0]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [0,0,1] and Input == 1:
-                Output_status = [0,1,0]
-                Current_status = [1,0,0]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [0,1,0] and Input == 0:
-                Output_status = [1,1,1]
-                Current_status = [0,0,1]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [0,1,0] and Input == 1:
-                Output_status = [0,0,0]
-                Current_status = [1,0,1]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [0,1,1] and Input == 0:
-                Output_status = [0,1,0]
-                Current_status = [0,0,1]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [0,1,1] and Input == 1:
-                Output_status = [1,0,1]
-                Current_status = [1,0,1]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [1,0,0] and Input == 0:
-                Output_status = [1,1,0]
-                Current_status = [0,1,0]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [1,0,0] and Input == 1:
-                Output_status = [0,0,1]
-                Current_status = [1,1,0]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [1,0,1] and Input == 0:
-                Output_status = [0,1,1]
-                Current_status = [0,1,0]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [1,0,1] and Input == 1:
-                Output_status = [1,0,0]
-                Current_status = [1,1,0]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [1,1,0] and Input == 0:
-                Output_status = [0,0,1]
-                Current_status = [0,1,1]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [1,1,0] and Input == 1:
-                Output_status = [1,1,0]
-                Current_status = [1,1,1]
-                output_status_array.extend(Output_status)
-        
-            ###############
-        
-            elif Current_status == [1,1,1] and Input == 0:
-                Output_status = [1,0,0]
-                Current_status = [0,1,1]
-                output_status_array.extend(Output_status)
-        
-            elif Current_status == [1,1,1] and Input == 1:
-                Output_status = [0,1,1]
-                Current_status = [1,1,1]
-                output_status_array.extend(Output_status)
-
-        #print("Input:", Input)
-        #print("Current Status:", Current_status)
-        #print("------------------------")
-
-    print("------------------------")
-    print("Output Status Array:", output_status_array)
-    print("------------------------")
-
-    separate_encoded_arrays = []
-    for i in range(0, len(output_status_array), 18):
-        separate_encoded_arrays.append(output_status_array[i:i+18])
-        
-    print("Separate encoded Array:", separate_encoded_arrays)
-
-    #for input_encoded_codeword in separate_encoded_arrays:
-    #    print("Input Codeword:", input_encoded_codeword)
-    #for index, input_encoded_codeword in enumerate(separate_encoded_arrays, start=1):
-        #print(f"Input Codeword{index}: {input_encoded_codeword}")
-    
-    send_data_word(output_status_array)
-
-data_word = '101011001010110011010100110010101101001101011001010100110101010011010110010110100110101001011010110'
-dataword = [int(bit) for bit in data_word]
-print("dataword",dataword)
-# Test the function with a sample dataword
-#dataword = [1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 0, 1, 1, 0]#dataword = [1, 0, 1, 1, 0, 1]
-process_data(dataword)
-print("Bit transmission finished")
-
-
-
-
