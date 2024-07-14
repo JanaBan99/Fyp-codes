@@ -1,0 +1,472 @@
+from machine import ADC, Pin
+import time
+import utime
+from machine import RTC
+import os
+
+
+# Define analog inputs
+ANALOG_IN_PIN = 28
+
+# Floats for resistor values in divider (in ohms)
+R1 = 30000.0
+R2 = 7500.0
+
+# Float for Reference Voltage
+ref_voltage = 3.3
+
+# Setup ADC
+adc = ADC(Pin(ANALOG_IN_PIN))
+
+Decoded_bits=[]
+bit_set1 = []
+
+def LDPC_decording(codeword):
+                 #101011001010110011010100110010101101001101011001010100110101010011010110010110100110101001011010011
+    #codeword = '11111010010111001111101001011100011011011100010001011100111110100110110101010011111101011010100111110101010100111111010111000100011011011010011011110101111110101010011011111010111101011111101010100110'
+    P = [[1, 0, 0, 1],
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 1]]
+
+    def transpose(X):
+        transpose = [[0, 0, 0, 0] for _ in range(len(X))]
+
+        try:
+            cols_A = len(X[0])
+        except TypeError:
+            cols_A = len(X)
+
+        # Compute the transpose
+        for i in range(len(X)):
+            for j in range(cols_A):
+                transpose[j][i] = X[i][j]
+
+        return transpose
+
+    Transpose_P = transpose(P)
+    #print("Transpose of P :", Transpose_P)
+
+    #Identity matrix generation
+    identity_matrix = []
+    for i in range(4):
+        # Initialize an empty row
+        row = []
+        # Loop over each column in the current row
+        for j in range(len(P[1])):
+            # If row index is equal to column index, set element to 1
+            if i == j:
+                row.append(1)
+            # Otherwise, set element to 0
+            else:
+                row.append(0)
+                # Append the row to the matrix
+        identity_matrix.append(row)
+
+    #print("Identity Matrix: ", identity_matrix)
+
+    Parity_check_matrix = []
+    for k in range(4):
+        identity_matrix[k].extend(Transpose_P[k])
+        Parity_check_matrix.append(identity_matrix[k])
+
+    print("Parity check Matrix: ", Parity_check_matrix) 
+
+    def transpose_matrix(matrix):
+    # Get the number of rows and columns in the original matrix
+        rows = len(matrix)
+        cols = len(matrix[0])
+    
+        # Create a new matrix with the dimensions swapped
+        transposed = [[0 for _ in range(rows)] for _ in range(cols)]
+    
+        # Fill the new matrix with transposed values
+        for i in range(rows):
+            for j in range(cols):
+                transposed[j][i] = matrix[i][j]
+    
+        return transposed
+
+    Transpose_Parity_check_matrix = transpose_matrix(Parity_check_matrix)
+    print("Transpose of the Parity Check Matrix", Transpose_Parity_check_matrix)
+    
+    Syndrome = []
+    segments = [codeword[i:i+8] for i in range(0, len(codeword), 8)]
+    print("segment: ", segments)
+    # Convert each 8-bit segment into a list of integers
+    r = [[int(bit) for bit in segment] for segment in segments]
+
+    for j in range(len(r)):
+        a = []  # Initialize a new list for each syndrome calculation
+        for i in range(0, 4):
+            a.append(
+                r[j][0] * Transpose_Parity_check_matrix[0][i] ^ 
+                r[j][1] * Transpose_Parity_check_matrix[1][i] ^ 
+                r[j][2] * Transpose_Parity_check_matrix[2][i] ^ 
+                r[j][3] * Transpose_Parity_check_matrix[3][i] ^ 
+                r[j][4] * Transpose_Parity_check_matrix[4][i] ^ 
+                r[j][5] * Transpose_Parity_check_matrix[5][i] ^ 
+                r[j][6] * Transpose_Parity_check_matrix[6][i] ^ 
+                r[j][7] * Transpose_Parity_check_matrix[7][i]
+            )
+        Syndrome.append(a)
+
+    print("Syndrome: ", Syndrome)
+    
+    Corrected_bits = []
+    
+    for j in range(0, 25):
+        a = []
+        if Syndrome[j] == [0, 0, 0, 0]: #Has no errors
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            #print(c)
+            a = c
+            #a.append(segments[j])
+            #print(a)
+            
+        elif Syndrome[j][0]== 1 & Syndrome[j][1] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 0, 0, 0, 1, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+            
+        elif Syndrome[j][1]== 1 & Syndrome[j][2] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 0, 0, 0, 0, 1, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+            
+        elif Syndrome[j][2]== 1 & Syndrome[j][3] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 0, 0, 0, 0, 0, 1]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+            
+        elif Syndrome[j][0]== 1 & Syndrome[j][3] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 0, 0, 1, 0, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+    
+        elif Syndrome[j][3] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 0, 1, 0, 0, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+        
+        elif Syndrome[j][2] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 0, 1, 0, 0, 0, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)    
+            
+        elif Syndrome[j][1] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[0, 1, 0, 0, 0, 0, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)
+            
+        elif Syndrome[j][0] == 1:
+            x=segments[j]
+            c = [int(digit) for digit in str(x)]
+            print("****************************")
+            print(c)
+            b=[1, 0, 0, 0, 0, 0, 0, 0]
+            a = [x ^ y for x, y in zip(c, b)]
+            print(a)
+            print(j)        
+        
+        Corrected_bits.append(a)
+    #print("Corrected bits: ", Corrected_bits)
+    
+    print("Corrected bits: ",Corrected_bits)
+    # Remove the first 4 elements and join the remaining elements
+    remaining_bits = [''.join(map(str, sub_array[4:])) for sub_array in Corrected_bits]
+    #print("LDPC Decoded bits :",remaining_bits)
+    print()
+    # Print the resulting bits horizontally
+    print("Decoded_Bits:",''.join(remaining_bits))
+    Decoded_bits.append(remaining_bits)
+    
+    
+    #bit_set1.append(Corrected_bits)
+
+
+def Data(LDPC_encoded_bits,difference2,transmitted_codeword,difference1):
+    file_path = "LDPC_withnoise.csv"
+    file_exists = False
+    try:
+        with open(file_path, "r"):
+            file_exists = True
+    except OSError:
+        file_exists = False
+    
+    with open(file_path, "a") as file:
+        # Write header if file is empty
+        if not file_exists:
+            file.write("Received_bits,Error_received,Decoded_bits,Error_decoded\n")
+        # Write data and differences
+        file.write(f"{LDPC_encoded_bits},{difference2},{transmitted_codeword},{difference1}\n")
+
+    file.close()
+
+def read_voltage():
+    # Read the analog input
+    adc_value = adc.read_u16()
+    
+    # Determine voltage at ADC input
+    adc_voltage = (adc_value / 65535) * ref_voltage
+    
+    # Calculate voltage at divider input
+    in_voltage = adc_voltage * (R1 + R2) / R2
+    
+    return in_voltage
+
+def edge_detection():
+    previous_voltage = read_voltage()
+    
+    time.sleep(0.01)
+    
+    while True:
+        current_voltage = read_voltage()
+        print(current_voltage)
+        if current_voltage > previous_voltage+3:  # value was 5 up to 60 cm Edge rise threshold
+            print("Rising edge detected")
+            break
+        previous_voltage = current_voltage
+        time.sleep(0.1)
+
+def main():
+    voltages = []  # Array to store voltage values
+    Bits = []
+    #threshold_value=False 
+    while len(voltages) < 10:
+        #start_time = time.time()
+
+        #while len(samples) < 10:
+        input_voltage = read_voltage()
+        #print(" >>>>>>>>>>>>>>>>>>>>Input Voltage = {:.2f}".format(input_voltage))
+        voltages.append(input_voltage)
+        #print("Received voltages :",voltages)
+        time.sleep(0.1)
+
+    #print("123")
+    print("Received voltages :",voltages)
+    # Calculate threshold from last 5 values
+    first_five_average = sum(voltages[:5]) / 5
+    threshold = first_five_average - (0.58 * first_five_average)
+    #threshold = 0.42 * first_five_average
+    print("Threshold Value = {:.6f}".format(threshold))
+    threshold_value=True
+    
+    # Array to store binary values based on threshold comparison
+    binary_values = []
+
+    # Compare voltage values with threshold
+    for voltage in voltages:
+        if voltage > threshold:
+            binary_values.append(1)
+        else:
+            binary_values.append(0)
+    print()
+    print("Binary values based on threshold comparison:", binary_values)
+
+    # Check if the binary sequence matches the specified pattern
+    if binary_values == [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]:
+        print()
+        print("Proceeding to the next part...")
+    else:
+        print("Session terminated.")
+        #return
+
+    
+        # Sampling and calculating average for 1 second
+        #samples = []
+        #start_time = time.time()
+    if threshold_value==True:
+        voltages = []  # Array to store voltage values
+        binary_values = []
+        while len(voltages) <96:
+            #start_time = time.time()
+           
+            input_voltage = read_voltage()
+            
+            #print(" >>>>>>>>>>>>>>>>>>>>Input Voltage = {:.2f}".format(input_voltage))
+            voltages.append(input_voltage)
+            time.sleep(0.1)
+        print("dataword Voltage =",voltages)
+        for voltage in voltages: 
+            if voltage > threshold:
+                binary_values.append(1)
+            else:
+                binary_values.append(0)
+    print()
+    print("Binary values based on threshold comparison:", binary_values)
+            
+    #print("Received Bits: ", Bits)
+    received_bits1 = ''.join(map(str, binary_values))
+    print()
+    print("Recieved bits set 1:",received_bits1)
+    print()
+    bit_set1.append(received_bits1)
+    #print("Received Bits:    [", received_bits, "]", sep='')
+    
+    #LDPC_decording(received_bits)
+    
+    #decoded_bits = LDPC_decording(received_bits)
+    #print("Final decoded bits", decoded_bits)
+
+
+def main2():
+    voltages = []  # Array to store voltage values
+    Bits = []
+    #threshold_value=False 
+    while len(voltages) < 10:
+        #start_time = time.time()
+
+        #while len(samples) < 10:
+        input_voltage = read_voltage()
+        #print(" >>>>>>>>>>>>>>>>>>>>Input Voltage = {:.2f}".format(input_voltage))
+        voltages.append(input_voltage)
+        #print("Received voltages :",voltages)
+        time.sleep(0.1)
+
+    #print("123")
+    print("Received voltages :",voltages)
+    # Calculate threshold from last 5 values
+    first_five_average = sum(voltages[:5]) / 5
+    threshold = first_five_average - (0.58 * first_five_average)
+    #threshold = 0.42 * first_five_average
+    print("Threshold Value = {:.6f}".format(threshold))
+    threshold_value=True
+    
+    # Array to store binary values based on threshold comparison
+    binary_values = []
+
+    # Compare voltage values with threshold
+    for voltage in voltages:
+        if voltage > threshold:
+            binary_values.append(1)
+        else:
+            binary_values.append(0)
+
+    print("Binary values based on threshold comparison:", binary_values)
+
+    # Check if the binary sequence matches the specified pattern
+    if binary_values == [1, 1, 1, 1, 1, 0, 0, 0, 0, 0]:
+        print("Proceeding to the next part...")
+    else:
+        print("Session terminated.")
+        #return
+
+    
+        # Sampling and calculating average for 1 second
+        #samples = []
+        #start_time = time.time()
+    if threshold_value==True:
+        voltages = []  # Array to store voltage values
+        binary_values = []
+        while len(voltages) <104:
+            #start_time = time.time()
+           
+            input_voltage = read_voltage()
+            
+            #print(" >>>>>>>>>>>>>>>>>>>>Input Voltage = {:.2f}".format(input_voltage))
+            voltages.append(input_voltage)
+            time.sleep(0.1)
+        print("dataword Voltage =",voltages)
+        for voltage in voltages: 
+            if voltage > threshold:
+                binary_values.append(1)
+            else:
+                binary_values.append(0)
+
+    print("Binary values based on threshold comparison:", binary_values)
+            
+    #print("Received Bits: ", Bits)
+    received_bits = ''.join(map(str, binary_values))
+    #print(received_bits)
+    bit_set1.append(received_bits)
+    print()
+    print("Recieved bits set 2 :    [", received_bits, "]", sep='')
+    print()
+'''
+    final_bits = ''.join(bit_set1)
+    #LDPC_decording(received_bits)
+    print("Bits_set",final_bits)
+    LDPC_decording(final_bits)
+    print("Final decoded bits",decoded_bits )
+'''
+if __name__ == "__main__":
+    print("Starting 1st edge detection...")
+    edge_detection()
+    print("Starting main function...")
+    main()
+
+    print("Starting 2nd edge detection...")
+    edge_detection()
+    print("Starting main function...")
+    
+    main2()
+    bit_set1 = ''.join(bit_set1)
+    print()
+    print("Total Bitstream:", bit_set1)
+
+    LDPC_decording(bit_set1)
+  
+    result = ''.join(Decoded_bits[0])
+    print("result:",result)
+  
+    print()
+    transmitted_codeword = '1010110010101100110101001100101011010011010110010101001101010100110101100101101001101010010110100110'
+    bit1 = transmitted_codeword 
+    bit2 = result
+    print("Bits before encoding :",len(bit1))
+    print("Received bits after decoding :",len(bit2))
+    difference1 = sum(1 for b1, b2 in zip(bit1, bit2) if b1 != b2)
+    print("Number of differences between the two bit streams:", difference1)
+    print()
+
+    print()
+    LDPC_encoded_bits ='11111010010111001111101001011100011011011100010001011100111110100110110101010011111101011010100111110101010100111111010111000100011011011010011011110101111110101010011011111010111101011111101010100110'
+    bit3 = LDPC_encoded_bits
+    bit4 = bit_set1
+    print("Transmitted encoded bits :",len(bit3))
+    print("Received encoded Bits :",len(bit4))
+    difference2 = sum(1 for b1, b2 in zip(bit3, bit4) if b1 != b2)
+    print("Number of differences between the two bit streams:", difference2)
+    print()
+    #Data(LDPC_encoded_bits,difference2,transmitted_codeword,difference1)
+
+
+
+
