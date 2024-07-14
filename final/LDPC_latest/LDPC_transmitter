@@ -1,0 +1,116 @@
+import machine
+import utime
+
+# Define GPIO pins
+led_pin = machine.Pin(16, machine.Pin.OUT)
+
+def LDPC_encoding(codeword):
+    #Initialize 
+    P = [[1, 0, 0, 1],
+        [1, 1, 0, 0],
+        [0, 1, 1, 0],
+        [0, 0, 1, 1]]
+
+    #Identity matrix generation
+    identity_matrix = []
+    for i in range(len(P[1])):
+            # Initialize an empty row
+            row = []
+            # Loop over each column in the current row
+            for j in range(len(P[1])):
+                # If row index is equal to column index, set element to 1
+                if i == j:
+                    row.append(1)
+                # Otherwise, set element to 0
+                else:
+                    row.append(0)
+            # Append the row to the matrix
+            identity_matrix.append(row)
+    #print("Identity Matrix: ", identity_matrix)
+
+    #Generator Matrix
+    Generator_Matrix = []
+    for k in range(len(P[1])):
+        P[k].extend(identity_matrix[k])
+        Generator_Matrix.append(P[k])
+
+    #U = [1, 0, 1, 1]
+
+    #print("Generator Matrix: ", Generator_Matrix)   
+    
+    CodeWord_matrix = []
+    #len(CodeWord_matrix) == 8
+
+    encoded_word = []
+    
+    # Multiply codeword with Generator_Matrix
+    for j in range(len(Generator_Matrix[0])):
+        # Perform the XOR operation for each element in the resulting word
+        result = (
+            codeword[0] * Generator_Matrix[0][j] ^
+            codeword[1] * Generator_Matrix[1][j] ^
+            codeword[2] * Generator_Matrix[2][j] ^
+            codeword[3] * Generator_Matrix[3][j]
+        )
+        # Append the result to the encoded_word list
+        encoded_word.append(result)
+    #print("codeword: ", encoded_word)
+
+    binary_str_list = [str(digit) for digit in encoded_word]
+    #print(binary_str_list)
+   
+    # Join the list of strings into a single string
+    binary_string = ''.join(binary_str_list)
+    #print("encoded",binary_string)
+    return binary_string
+    
+codeword = '1010110010101100110101001100101011010011010110010101001101010100110101100101101001101010010110100110'
+print(len(codeword))
+chunks = [codeword[i:i+4] for i in range(0, 100, 4)]
+print(chunks)
+
+X = [[int(bit) for bit in word] for word in chunks]
+print(X)
+
+
+first_part = X[:12]
+second_part = X[12:]
+
+print("starting initializing bits")
+initial_word = '1111100000'
+for bit in initial_word:  # Transmit initial 10 bits
+    led_pin.value(int(bit))  # Set the LED state based on the bit
+    print(bit, end='')  # Print the transmitting bit
+    utime.sleep_ms(100)  # Wait for 1000 milliseconds (1 second)
+print()
+
+
+for row in first_part:
+    dataword = LDPC_encoding(row)
+    print()
+    for bit in dataword:
+        led_pin.value(int(bit))
+        print(bit, end='')
+        utime.sleep_ms(100)
+    led_pin.value(0)
+
+# Sleep period
+utime.sleep_ms(200)
+
+print()
+print("Resending initializing bits")
+for bit in initial_word:
+    led_pin.value(int(bit))
+    print(bit, end='')
+    utime.sleep_ms(100)
+print()
+
+# Send the remaining 13 sets of encoded 8-bit values
+for row in second_part:
+    dataword = LDPC_encoding(row)
+    print()
+    for bit in dataword:
+        led_pin.value(int(bit))
+        print(bit, end='')
+        utime.sleep_ms(100)
+    led_pin.value(0)
