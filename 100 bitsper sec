@@ -1,0 +1,126 @@
+from machine import ADC, Pin, Timer
+import utime
+
+voltages = []
+adc_values = []
+threshold_adc = 1000
+threshold=[]
+binary_values=[]
+# Define analog input pin
+ANALOG_IN_PIN = 28
+
+# Floats for resistor values in the divider (in ohms)
+R1 = 30000.0
+R2 = 7500.0
+
+# Float for Reference Voltage
+ref_voltage = 3.3
+
+# Setup ADC
+adc = ADC(Pin(ANALOG_IN_PIN))
+
+# Timer define
+timer_edge_detection = Timer()
+timer_adc_sampling = Timer()
+
+def Data(bit_stream_2,differences):
+    file_path = "without_encoding_100.csv"
+    file_exists = False
+    try:
+        with open(file_path, "r"):
+            file_exists = True
+    except OSError:
+        file_exists = False
+    
+    with open(file_path, "a") as file:
+        # Write header if file is empty
+        if not file_exists:
+            file.write("Received Bits,Differences\n")
+        # Write data and differences
+        file.write(f"{bit_stream_2},{differences}\n")
+
+    file.close()
+    
+def read_adc_value():
+    # Read the analog input
+    return adc.read_u16()
+
+def edge_detection(timer):
+    global previous_adc_value
+    #print(previous_adc_value)
+    current_adc_value = read_adc_value()
+    if current_adc_value > previous_adc_value + threshold_adc:# Edge rise threshold
+        print(current_adc_value)
+        print("Rising edge detected")
+        timer_edge_detection.deinit()
+        timer_adc_sampling.init(period=10, mode=Timer.PERIODIC, callback=check)
+    previous_adc_value = current_adc_value
+        #print(previous_adc_value)
+def check(timer):
+    global adc_values
+    
+    if len(adc_values) <109:
+        input_adc_value = read_adc_value()
+        print(f"ADC Read: {input_adc_value}")
+        adc_values.append(input_adc_value)
+    else:
+        timer_adc_sampling.deinit()  # Deinitialize the timer after collecting 109 readings
+        print("ADC values:", adc_values)
+        calculate_voltages(adc_values)
+
+def calculate_voltages(adc_values):
+    voltages = [(adc_value / 65535) * ref_voltage for adc_value in adc_values]
+    in_voltages = [adc_voltage * (R1 + R2) / R2 for adc_voltage in voltages]
+    print("Voltages:", in_voltages)
+    calculate_threshold(in_voltages)
+
+def calculate_threshold(in_voltages):
+    global threshold, binary_values
+    first_five_average = sum(in_voltages[:5]) / 5
+    threshold = first_five_average - (0.58 * first_five_average)
+    print("Threshold Value = {:.6f}".format(threshold))
+
+    binary_values=[1 if adc_voltage > threshold else 0 for adc_voltage in in_voltages]
+    print("Binary values based on threshold comparison:", binary_values)
+    initialization_bits=binary_values[:10]
+    data_bits=binary_values[10:]
+    bit_stream_1 = ''.join(map(str, initialization_bits))
+    print("Initialization_Bits", bit_stream_1)
+    print()
+    bit_stream_2=''.join(map(str, data_bits))
+    print("Data_Bits", bit_stream_2)
+    checkBits(bit_stream_2)
+
+def checkBits( bit_stream_2):
+    transmittedBits= '101011001010110011010100110010101101001101011001010100110101010011010110010110100110101001011010110'
+    #transmittedBits= '101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101'
+    print('************************************************************')
+    print()
+    print("Transmitted_Bits",transmittedBits)
+    print()
+    print("Transmitted bits length:", len(transmittedBits))
+    print("Received Bits length:", len(bit_stream_2))
+
+    if len(transmittedBits) != len(bit_stream_2):
+        raise ValueError("Bit streams must have the same length")
+
+    differences = sum(1 for b1, b2 in zip(transmittedBits, bit_stream_2) if b1 != b2)
+    print("Number of differences between the two bit streams:", differences)
+    Data(bit_stream_2,differences)
+
+
+def main():
+    global previous_adc_value
+    previous_adc_value = read_adc_value()
+    #print(previous_adc_value)
+    # Initialize the edge detection timer
+    timer_edge_detection.init(period=10, mode=Timer.PERIODIC, callback=edge_detection)
+
+    print("Starting edge detection...")
+
+if __name__ == "__main__":
+    main()
+
+
+
+
